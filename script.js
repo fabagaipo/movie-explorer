@@ -47,6 +47,63 @@ prevPageBtn.addEventListener('click', () => { if (currentPage > 1) { currentPage
 nextPageBtn.addEventListener('click', () => { currentPage++; searchMovies(); });
 themeToggle.addEventListener('click', toggleTheme);
 
+// Infinite scroll
+window.addEventListener('scroll', () => {
+    if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500) {
+        if (currentPage < Math.ceil(totalResults / 10) && totalResults > 0) {
+            currentPage++;
+            loadMoreResults();
+        }
+    }
+});
+
+// Keyboard navigation
+let focusedCardIndex = -1;
+let currentMovieCards = [];
+
+document.addEventListener('keydown', (e) => {
+    // Close modal with Escape
+    if (e.key === 'Escape') {
+        closeModal();
+        closeTrailerModal();
+        return;
+    }
+    
+    // Only enable keyboard navigation when not in input
+    if (document.activeElement === searchInput) return;
+    
+    const movieCards = document.querySelectorAll('.movie-card');
+    if (movieCards.length === 0) return;
+    
+    currentMovieCards = Array.from(movieCards);
+    
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        focusedCardIndex = (focusedCardIndex + 1) % currentMovieCards.length;
+        focusCard(focusedCardIndex);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        focusedCardIndex = (focusedCardIndex - 1 + currentMovieCards.length) % currentMovieCards.length;
+        focusCard(focusedCardIndex);
+    } else if (e.key === 'Enter' && focusedCardIndex >= 0) {
+        e.preventDefault();
+        currentMovieCards[focusedCardIndex].click();
+    }
+});
+
+function focusCard(index) {
+    currentMovieCards.forEach((card, i) => {
+        if (i === index) {
+            card.style.boxShadow = '0 0 20px rgba(233, 69, 96, 0.8)';
+            card.style.transform = 'scale(1.05)';
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+            card.style.boxShadow = '';
+            card.style.transform = '';
+        }
+    });
+}
+
 closeBtn.addEventListener('click', closeModal);
 movieModal.addEventListener('click', (e) => {
     if (e.target === movieModal) {
@@ -137,6 +194,65 @@ function updatePaginationControls(totalPages) {
     } else {
         document.getElementById('pagination').style.display = 'flex';
     }
+}
+
+async function loadMoreResults() {
+    const query = searchInput.value.trim();
+    const yearFilterValue = yearFilter.value;
+    const typeFilterValue = typeFilter.value;
+    
+    if (!query) return;
+    
+    showLoading();
+    
+    try {
+        let url = `${BASE_URL}?apikey=${API_KEY}&s=${encodeURIComponent(query)}&page=${currentPage}`;
+        
+        if (typeFilterValue) {
+            url += `&type=${typeFilterValue}`;
+        }
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        hideLoading();
+
+        if (data.Response === 'True') {
+            let filteredMovies = data.Search;
+            
+            if (yearFilterValue) {
+                filteredMovies = filterByYear(filteredMovies, yearFilterValue);
+            }
+            
+            if (filteredMovies.length > 0) {
+                appendMovies(filteredMovies);
+                updatePaginationControls(Math.ceil(totalResults / 10));
+            }
+        }
+    } catch (error) {
+        hideLoading();
+        console.error('Error loading more results:', error);
+    }
+}
+
+function appendMovies(movies) {
+    movies.forEach(movie => {
+        const movieCard = document.createElement('div');
+        movieCard.className = 'movie-card';
+        movieCard.onclick = () => getMovieDetails(movie.imdbID);
+        movieCard.innerHTML = `
+            <img 
+                src="${movie.Poster !== 'N/A' ? movie.Poster : 'https://via.placeholder.com/300x450?text=No+Poster'}" 
+                alt="${movie.Title}" 
+                class="movie-poster"
+            >
+            <div class="movie-info">
+                <h3 class="movie-title">${movie.Title}</h3>
+                <p class="movie-year">${movie.Year}</p>
+            </div>
+        `;
+        resultsContainer.appendChild(movieCard);
+    });
 }
 
 function filterByYear(movies, yearFilter) {
@@ -271,11 +387,18 @@ function displayMovieDetails(movie) {
                 <p><strong>Language:</strong> ${movie.Language}</p>
                 <p><strong>Country:</strong> ${movie.Country}</p>
                 <p><strong>Awards:</strong> ${movie.Awards}</p>
+                ${movie.Collection ? `<p><strong>Collection:</strong> ${movie.Collection}</p>` : ''}
+                ${movie.BoxOffice && movie.BoxOffice !== 'N/A' ? `<p><strong>Box Office:</strong> ${movie.BoxOffice}</p>` : ''}
+                ${movie.imdbVotes && movie.imdbVotes !== 'N/A' ? `<p><strong>IMDb Votes:</strong> ${movie.imdbVotes}</p>` : ''}
+                <a href="https://www.imdb.com/title/${movie.imdbID}/reviews" target="_blank" class="reviews-link">📝 Read User Reviews on IMDb</a>
                 <button id="favoriteBtn" class="favorite-btn" onclick="toggleFavorite('${movie.imdbID}', '${movie.Title.replace(/'/g, "\\'")}', '${movie.Poster !== 'N/A' ? movie.Poster : ''}')">
                     ${isFavorite ? '❤️ Remove from Favorites' : '🤍 Add to Favorites'}
                 </button>
                 <button id="trailerBtn" class="trailer-btn" onclick="openTrailer('${movie.Title.replace(/'/g, "\\'")}')">
                     🎬 Watch Trailer
+                </button>
+                <button id="shareBtn" class="share-btn" onclick="shareMovie('${movie.imdbID}', '${movie.Title.replace(/'/g, "\\'")}')">
+                    🔗 Share
                 </button>
             </div>
         </div>
@@ -345,7 +468,8 @@ function toggleFavorite(imdbID, title, poster) {
     if (existingIndex > -1) {
         favorites.splice(existingIndex, 1);
     } else {
-        favorites.push({ imdbID, title, poster });
+        const note = prompt('Add a note for this movie (optional):', '');
+        favorites.push({ imdbID, title, poster, note: note || '' });
     }
     
     saveFavorites(favorites);
@@ -437,12 +561,19 @@ function updateSearchHistoryDatalist() {
 
 // Check if API key is set on page load
 window.addEventListener('load', () => {
-    if (API_KEY === 'YOUR_OMDB_API_KEY_HERE') {
+    if (API_KEY === 'YOUR_API_KEY_HERE') {
         showError('Please add your OMDb API key to script.js to use this application');
     }
     updateSearchHistoryDatalist();
     loadTrendingMovies();
     loadThemePreference();
+    
+    // Check for shared movie URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const sharedMovieId = urlParams.get('movie');
+    if (sharedMovieId) {
+        getMovieDetails(sharedMovieId);
+    }
 });
 
 // Theme toggle functions
@@ -553,6 +684,26 @@ async function openTrailer(movieTitle) {
         hideLoading();
         // Fallback: open YouTube search
         window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(movieTitle + ' trailer')}`, '_blank');
+    }
+}
+
+// Share movie function
+function shareMovie(imdbID, title) {
+    const shareUrl = `${window.location.origin}${window.location.pathname}?movie=${imdbID}`;
+    
+    if (navigator.share) {
+        navigator.share({
+            title: `Check out ${title}`,
+            text: `I found this great movie: ${title}`,
+            url: shareUrl
+        }).catch(console.error);
+    } else {
+        // Fallback: copy to clipboard
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            alert('Link copied to clipboard!');
+        }).catch(() => {
+            prompt('Copy this link:', shareUrl);
+        });
     }
 }
 

@@ -788,6 +788,46 @@ body.light-theme .skeleton-year {
     box-shadow: 0 5px 20px rgba(255, 0, 0, 0.4);
 }
 
+.share-btn {
+    margin-top: 10px;
+    margin-left: 10px;
+    padding: 12px 25px;
+    font-size: 1rem;
+    background: linear-gradient(45deg, #00c853, #00e676);
+    color: #fff;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 600;
+}
+
+.share-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(0, 200, 83, 0.4);
+}
+
+.reviews-link {
+    display: inline-block;
+    margin-top: 15px;
+    padding: 10px 20px;
+    background: linear-gradient(45deg, #ff9800, #f57c00);
+    color: #fff;
+    text-decoration: none;
+    border-radius: 25px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.reviews-link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(255, 152, 0, 0.4);
+}
+
+body.light-theme .reviews-link {
+    background: linear-gradient(45deg, #ff9800, #f57c00);
+}
+
 .trailer-modal-content {
     max-width: 900px;
     background: #000;
