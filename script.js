@@ -1,4 +1,4 @@
-const API_KEY = process.env.OMDB_API_KEY || 'YOUR_API_KEY_HERE';
+const API_KEY = import.meta.env.VITE_API_KEY;
 const BASE_URL = 'http://www.omdbapi.com/';
 
 const searchInput = document.getElementById('searchInput');
@@ -136,6 +136,7 @@ async function searchMovies() {
     showLoading();
     hideError();
     resultsContainer.innerHTML = '';
+    trendingSection.style.display = 'none';
 
     try {
         let url = `${BASE_URL}?apikey=${API_KEY}`;
