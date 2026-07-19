@@ -145,6 +145,7 @@ async function searchMovies() {
     hideError();
     resultsContainer.innerHTML = '';
     trendingSection.style.display = 'none';
+    document.getElementById('genreSections').style.display = 'none';
 
     try {
         let url = `${BASE_URL}?apikey=${API_KEY}`;
@@ -688,15 +689,55 @@ function displaySimilarMovies(movies) {
 // Load trending movies
 async function loadTrendingMovies() {
     try {
-        // Search for popular recent movies
-        const response = await fetch(`${BASE_URL}?apikey=${API_KEY}&s=2024&type=movie`);
-        const data = await response.json();
+        // Search for movies from different genres for 2026
+        const genres = ['action', 'comedy', 'drama', 'romance', 'horror', 'sci-fi'];
+        const genreSections = document.getElementById('genreSections');
+        genreSections.innerHTML = '';
         
-        if (data.Response === 'True') {
-            // Get first 6 movies for trending section
-            const trendingMovies = data.Search.slice(0, 6);
-            displayTrendingMovies(trendingMovies);
+        for (const genre of genres) {
+            try {
+                const response = await fetch(`${BASE_URL}?apikey=${API_KEY}&s=${genre}&y=2026&type=movie`);
+                const data = await response.json();
+                
+                if (data.Response === 'True') {
+                    // Create genre section
+                    const genreSection = document.createElement('div');
+                    genreSection.className = 'genre-section';
+                    genreSection.innerHTML = `
+                        <h3><i data-lucide="film"></i> ${genre.charAt(0).toUpperCase() + genre.slice(1)}</h3>
+                        <div class="genre-movies-container results-container"></div>
+                    `;
+                    genreSections.appendChild(genreSection);
+                    
+                    // Add movies to genre section
+                    const container = genreSection.querySelector('.genre-movies-container');
+                    const movies = data.Search.slice(0, 5);
+                    
+                    movies.forEach(movie => {
+                        const movieCard = document.createElement('div');
+                        movieCard.className = 'movie-card';
+                        movieCard.dataset.imdbId = movie.imdbID;
+                        movieCard.innerHTML = `
+                            <img 
+                                src="${movie.Poster !== 'N/A' ? movie.Poster : 'https://via.placeholder.com/300x450?text=No+Poster'}" 
+                                alt="${movie.Title}" 
+                                class="movie-poster"
+                            >
+                            <div class="movie-info">
+                                <h3 class="movie-title">${movie.Title}</h3>
+                                <p class="movie-year">${movie.Year}</p>
+                            </div>
+                        `;
+                        movieCard.addEventListener('click', () => getMovieDetails(movie.imdbID));
+                        container.appendChild(movieCard);
+                    });
+                }
+            } catch (error) {
+                console.error(`Error loading ${genre} movies:`, error);
+            }
         }
+        
+        lucide.createIcons();
     } catch (error) {
         console.error('Error loading trending movies:', error);
     }

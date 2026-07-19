@@ -453,6 +453,53 @@ header p {
     background-clip: text;
 }
 
+.genre-section {
+    margin-bottom: 40px;
+}
+
+.genre-section h3 {
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+    background: linear-gradient(45deg, #e94560, #ff6b6b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+body.light-theme .genre-section h3 {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.genre-movies-container {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 15px;
+}
+
+@media (max-width: 1200px) {
+    .genre-movies-container {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (max-width: 900px) {
+    .genre-movies-container {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .genre-movies-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
 .loading-spinner {
     text-align: center;
     margin: 40px 0;
