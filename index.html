@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Explorer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Movie Explorer</h1>
+            <p>Search for movies and discover their ratings and details</p>
+            <div class="header-buttons">
+                <button id="themeToggle" class="theme-toggle">🌙</button>
+                <button id="favoritesBtn" class="favorites-btn">❤️ Favorites</button>
+            </div>
+        </header>
+
+        <div class="search-container">
+            <input 
+                type="text" 
+                id="searchInput" 
+                placeholder="Enter movie title..." 
+                autocomplete="off"
+                list="searchHistory"
+            >
+            <datalist id="searchHistory"></datalist>
+            <button id="searchBtn">Search</button>
+        </div>
+
+        <div class="filters-container">
+            <select id="yearFilter" class="filter-select">
+                <option value="">All Years</option>
+                <option value="2024">2024</option>
+                <option value="2023">2023</option>
+                <option value="2022">2022</option>
+                <option value="2021">2021</option>
+                <option value="2020">2020</option>
+                <option value="2019">2019</option>
+                <option value="2018">2018</option>
+                <option value="2010s">2010s</option>
+                <option value="2000s">2000s</option>
+                <option value="1990s">1990s</option>
+                <option value="older">Older</option>
+            </select>
+
+            <select id="typeFilter" class="filter-select">
+                <option value="">All Types</option>
+                <option value="movie">Movie</option>
+                <option value="series">Series</option>
+                <option value="episode">Episode</option>
+            </select>
+
+            <button id="clearFilters" class="clear-filters-btn">Clear Filters</button>
+        </div>
+
+        <div id="errorMessage" class="error-message"></div>
+
+        <div id="trendingSection" class="trending-section">
+            <h2>🔥 Trending Movies</h2>
+            <div id="trendingContainer" class="results-container"></div>
+        </div>
+
+        <div id="loadingSpinner" class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Loading...</p>
+        </div>
+
+        <div id="skeletonLoader" class="skeleton-loader">
+            <div class="skeleton-grid"></div>
+        </div>
+
+        <div id="resultsContainer" class="results-container"></div>
+
+        <div id="pagination" class="pagination-container">
+            <button id="prevPage" class="pagination-btn" disabled>← Previous</button>
+            <span id="pageInfo" class="page-info">Page 1</span>
+            <button id="nextPage" class="pagination-btn" disabled>Next →</button>
+        </div>
+
+        <div id="movieModal" class="modal">
+            <div class="modal-content">
+                <span class="close-btn">&times;</span>
+                <div id="modalBody"></div>
+                <div id="similarMoviesSection" class="similar-movies-section">
+                    <h3>Similar Movies</h3>
+                    <div id="similarMoviesContainer" class="similar-movies-container"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="trailerModal" class="modal">
+            <div class="modal-content trailer-modal-content">
+                <span class="close-btn" onclick="closeTrailerModal()">&times;</span>
+                <div id="trailerBody"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
