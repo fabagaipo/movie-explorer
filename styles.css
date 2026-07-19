@@ -4,6 +4,15 @@
     box-sizing: border-box;
 }
 
+i {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+    width: 1.2em;
+    height: 1.2em;
+}
+
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
@@ -279,24 +288,25 @@ header p {
 }
 
 .theme-toggle {
-    padding: 10px 20px;
-    font-size: 1.5rem;
-    background: rgba(255, 255, 255, 0.1);
+    padding: 10px 25px;
+    font-size: 1rem;
+    background: linear-gradient(45deg, #e94560, #ff6b6b);
     color: #fff;
-    border: 2px solid #e94560;
-    border-radius: 50%;
-    width: 50px;
-    height: 50px;
+    border: none;
+    border-radius: 25px;
     cursor: pointer;
     transition: all 0.3s ease;
+    font-weight: 600;
+    margin-top: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 8px;
 }
 
 .theme-toggle:hover {
-    background: rgba(233, 69, 96, 0.2);
-    transform: rotate(20deg);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(233, 69, 96, 0.4);
 }
 
 .favorites-btn {
@@ -310,6 +320,10 @@ header p {
     transition: all 0.3s ease;
     font-weight: 600;
     margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
 .favorites-btn:hover {
@@ -751,17 +765,34 @@ body.light-theme .skeleton-year {
     color: #fff;
 }
 
-.favorite-btn {
+.modal-details .button-group {
+    display: flex;
+    gap: 10px;
     margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.favorite-btn,
+.trailer-btn,
+.share-btn {
+    flex: 1;
+    min-width: 120px;
     padding: 12px 25px;
     font-size: 1rem;
-    background: linear-gradient(45deg, #e94560, #ff6b6b);
     color: #fff;
     border: none;
     border-radius: 25px;
     cursor: pointer;
     transition: all 0.3s ease;
     font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.favorite-btn {
+    background: linear-gradient(45deg, #e94560, #ff6b6b);
 }
 
 .favorite-btn:hover {
@@ -770,17 +801,7 @@ body.light-theme .skeleton-year {
 }
 
 .trailer-btn {
-    margin-top: 10px;
-    margin-left: 10px;
-    padding: 12px 25px;
-    font-size: 1rem;
     background: linear-gradient(45deg, #ff0000, #cc0000);
-    color: #fff;
-    border: none;
-    border-radius: 25px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-weight: 600;
 }
 
 .trailer-btn:hover {
@@ -789,17 +810,7 @@ body.light-theme .skeleton-year {
 }
 
 .share-btn {
-    margin-top: 10px;
-    margin-left: 10px;
-    padding: 12px 25px;
-    font-size: 1rem;
     background: linear-gradient(45deg, #00c853, #00e676);
-    color: #fff;
-    border: none;
-    border-radius: 25px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-weight: 600;
 }
 
 .share-btn:hover {
@@ -808,7 +819,10 @@ body.light-theme .skeleton-year {
 }
 
 .reviews-link {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     margin-top: 15px;
     padding: 10px 20px;
     background: linear-gradient(45deg, #ff9800, #f57c00);

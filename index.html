@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Movie Explorer</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
     <div class="container">
@@ -12,8 +13,8 @@
             <h1>Movie Explorer</h1>
             <p>Search for movies and discover their ratings and details</p>
             <div class="header-buttons">
-                <button id="themeToggle" class="theme-toggle">🌙</button>
-                <button id="favoritesBtn" class="favorites-btn">❤️ Favorites</button>
+                <button id="themeToggle" class="theme-toggle"><i data-lucide="moon"></i> Theme</button>
+                <button id="favoritesBtn" class="favorites-btn"><i data-lucide="heart"></i> Favorites</button>
             </div>
         </header>
 
@@ -58,7 +59,7 @@
         <div id="errorMessage" class="error-message"></div>
 
         <div id="trendingSection" class="trending-section">
-            <h2>🔥 Trending Movies</h2>
+            <h2><i data-lucide="flame"></i> Trending Movies</h2>
             <div id="trendingContainer" class="results-container"></div>
         </div>
 
@@ -92,7 +93,7 @@
 
         <div id="trailerModal" class="modal">
             <div class="modal-content trailer-modal-content">
-                <span class="close-btn" onclick="closeTrailerModal()">&times;</span>
+                <span class="close-btn trailer-close">&times;</span>
                 <div id="trailerBody"></div>
             </div>
         </div>

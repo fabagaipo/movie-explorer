@@ -111,6 +111,14 @@ movieModal.addEventListener('click', (e) => {
     }
 });
 
+// Trailer modal close button
+document.querySelector('.trailer-close').addEventListener('click', closeTrailerModal);
+trailerModal.addEventListener('click', (e) => {
+    if (e.target === trailerModal) {
+        closeTrailerModal();
+    }
+});
+
 // Search movies function
 async function searchMovies() {
     const query = searchInput.value.trim();
@@ -240,7 +248,7 @@ function appendMovies(movies) {
     movies.forEach(movie => {
         const movieCard = document.createElement('div');
         movieCard.className = 'movie-card';
-        movieCard.onclick = () => getMovieDetails(movie.imdbID);
+        movieCard.dataset.imdbId = movie.imdbID;
         movieCard.innerHTML = `
             <img 
                 src="${movie.Poster !== 'N/A' ? movie.Poster : 'https://via.placeholder.com/300x450?text=No+Poster'}" 
@@ -252,6 +260,7 @@ function appendMovies(movies) {
                 <p class="movie-year">${movie.Year}</p>
             </div>
         `;
+        movieCard.addEventListener('click', () => getMovieDetails(movie.imdbID));
         resultsContainer.appendChild(movieCard);
     });
 }
@@ -311,7 +320,7 @@ function clearFilters() {
 // Display movies in grid
 function displayMovies(movies) {
     resultsContainer.innerHTML = movies.map(movie => `
-        <div class="movie-card" onclick="getMovieDetails('${movie.imdbID}')">
+        <div class="movie-card" data-imdb-id="${movie.imdbID}">
             <img 
                 src="${movie.Poster !== 'N/A' ? movie.Poster : 'https://via.placeholder.com/300x450?text=No+Poster'}" 
                 alt="${movie.Title}" 
@@ -323,6 +332,14 @@ function displayMovies(movies) {
             </div>
         </div>
     `).join('');
+    
+    // Add event listeners to movie cards
+    document.querySelectorAll('.movie-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const imdbID = card.dataset.imdbId;
+            getMovieDetails(imdbID);
+        });
+    });
 }
 
 // Get detailed movie information
@@ -391,22 +408,42 @@ function displayMovieDetails(movie) {
                 ${movie.Collection ? `<p><strong>Collection:</strong> ${movie.Collection}</p>` : ''}
                 ${movie.BoxOffice && movie.BoxOffice !== 'N/A' ? `<p><strong>Box Office:</strong> ${movie.BoxOffice}</p>` : ''}
                 ${movie.imdbVotes && movie.imdbVotes !== 'N/A' ? `<p><strong>IMDb Votes:</strong> ${movie.imdbVotes}</p>` : ''}
-                <a href="https://www.imdb.com/title/${movie.imdbID}/reviews" target="_blank" class="reviews-link">📝 Read User Reviews on IMDb</a>
-                <button id="favoriteBtn" class="favorite-btn" onclick="toggleFavorite('${movie.imdbID}', '${movie.Title.replace(/'/g, "\\'")}', '${movie.Poster !== 'N/A' ? movie.Poster : ''}')">
-                    ${isFavorite ? '❤️ Remove from Favorites' : '🤍 Add to Favorites'}
-                </button>
-                <button id="trailerBtn" class="trailer-btn" onclick="openTrailer('${movie.Title.replace(/'/g, "\\'")}')">
-                    🎬 Watch Trailer
-                </button>
-                <button id="shareBtn" class="share-btn" onclick="shareMovie('${movie.imdbID}', '${movie.Title.replace(/'/g, "\\'")}')">
-                    🔗 Share
-                </button>
+                <a href="https://www.imdb.com/title/${movie.imdbID}/reviews" target="_blank" class="reviews-link"><i data-lucide="file-text"></i> Read User Reviews on IMDb</a>
+                <div class="button-group">
+                    <button id="favoriteBtn" class="favorite-btn" data-imdb-id="${movie.imdbID}" data-title="${movie.Title.replace(/'/g, "\\'")}" data-poster="${movie.Poster !== 'N/A' ? movie.Poster : ''}">
+                        ${isFavorite ? '<i data-lucide="heart-off"></i> Remove from Favorites' : '<i data-lucide="heart"></i> Add to Favorites'}
+                    </button>
+                    <button id="trailerBtn" class="trailer-btn" data-title="${movie.Title.replace(/'/g, "\\'")}">
+                        <i data-lucide="film"></i> Watch Trailer
+                    </button>
+                    <button id="shareBtn" class="share-btn" data-imdb-id="${movie.imdbID}" data-title="${movie.Title.replace(/'/g, "\\'")}">
+                        <i data-lucide="share-2"></i> Share
+                    </button>
+                </div>
             </div>
         </div>
     `;
     
+    // Add event listeners to modal buttons
+    const favoriteBtn = document.getElementById('favoriteBtn');
+    const trailerBtn = document.getElementById('trailerBtn');
+    const shareBtn = document.getElementById('shareBtn');
+    
+    favoriteBtn.addEventListener('click', () => {
+        toggleFavorite(favoriteBtn.dataset.imdbId, favoriteBtn.dataset.title, favoriteBtn.dataset.poster);
+    });
+    
+    trailerBtn.addEventListener('click', () => {
+        openTrailer(trailerBtn.dataset.title);
+    });
+    
+    shareBtn.addEventListener('click', () => {
+        shareMovie(shareBtn.dataset.imdbId, shareBtn.dataset.title);
+    });
+    
     movieModal.style.display = 'block';
     document.body.style.overflow = 'hidden';
+    lucide.createIcons();
 }
 
 // Close modal
@@ -478,7 +515,8 @@ function toggleFavorite(imdbID, title, poster) {
     // Update the button in the modal
     const favoriteBtn = document.getElementById('favoriteBtn');
     if (favoriteBtn) {
-        favoriteBtn.innerHTML = existingIndex > -1 ? '🤍 Add to Favorites' : '❤️ Remove from Favorites';
+        favoriteBtn.innerHTML = existingIndex > -1 ? '<i data-lucide="heart-off"></i> Remove from Favorites' : '<i data-lucide="heart"></i> Add to Favorites';
+        lucide.createIcons();
     }
     
     // Update movie cards if they're displayed
@@ -497,7 +535,8 @@ function updateMovieCardFavoriteStatus(imdbID) {
                 favoriteIndicator.className = 'favorite-indicator';
                 card.querySelector('.movie-info').appendChild(favoriteIndicator);
             }
-            favoriteIndicator.innerHTML = isFavorite ? '❤️' : '';
+            favoriteIndicator.innerHTML = isFavorite ? '<i data-lucide="heart"></i>' : '';
+            if (isFavorite) lucide.createIcons();
         }
     });
 }
@@ -568,6 +607,7 @@ window.addEventListener('load', () => {
     updateSearchHistoryDatalist();
     loadTrendingMovies();
     loadThemePreference();
+    lucide.createIcons();
     
     // Check for shared movie URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -582,14 +622,16 @@ function loadThemePreference() {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'light') {
         document.body.classList.add('light-theme');
-        themeToggle.textContent = '☀️';
+        themeToggle.innerHTML = '<i data-lucide="sun"></i> Theme';
+        lucide.createIcons();
     }
 }
 
 function toggleTheme() {
     document.body.classList.toggle('light-theme');
     const isLight = document.body.classList.contains('light-theme');
-    themeToggle.textContent = isLight ? '☀️' : '🌙';
+    themeToggle.innerHTML = isLight ? '<i data-lucide="sun"></i> Theme' : '<i data-lucide="moon"></i> Theme';
+    lucide.createIcons();
     localStorage.setItem('theme', isLight ? 'light' : 'dark');
 }
 
@@ -624,7 +666,7 @@ async function loadSimilarMovies(title, genre) {
 function displaySimilarMovies(movies) {
     similarMoviesSection.style.display = 'block';
     similarMoviesContainer.innerHTML = movies.map(movie => `
-        <div class="similar-movie-card" onclick="getMovieDetails('${movie.imdbID}')">
+        <div class="similar-movie-card" data-imdb-id="${movie.imdbID}">
             <img 
                 src="${movie.Poster !== 'N/A' ? movie.Poster : 'https://via.placeholder.com/120x180?text=No+Poster'}" 
                 alt="${movie.Title}" 
@@ -633,6 +675,14 @@ function displaySimilarMovies(movies) {
             <p class="similar-movie-title">${movie.Title}</p>
         </div>
     `).join('');
+    
+    // Add event listeners to similar movie cards
+    document.querySelectorAll('.similar-movie-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const imdbID = card.dataset.imdbId;
+            getMovieDetails(imdbID);
+        });
+    });
 }
 
 // Load trending movies
@@ -654,7 +704,7 @@ async function loadTrendingMovies() {
 
 function displayTrendingMovies(movies) {
     trendingContainer.innerHTML = movies.map(movie => `
-        <div class="movie-card" onclick="getMovieDetails('${movie.imdbID}')">
+        <div class="movie-card" data-imdb-id="${movie.imdbID}">
             <img 
                 src="${movie.Poster !== 'N/A' ? movie.Poster : 'https://via.placeholder.com/300x450?text=No+Poster'}" 
                 alt="${movie.Title}" 
@@ -666,6 +716,14 @@ function displayTrendingMovies(movies) {
             </div>
         </div>
     `).join('');
+    
+    // Add event listeners to trending movie cards
+    document.querySelectorAll('#trendingContainer .movie-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const imdbID = card.dataset.imdbId;
+            getMovieDetails(imdbID);
+        });
+    });
 }
 
 // Trailer functions
