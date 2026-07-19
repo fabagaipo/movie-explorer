@@ -1,5 +1,7 @@
 const API_KEY = import.meta.env.VITE_API_KEY;
-const BASE_URL = 'http://www.omdbapi.com/';
+const BASE_URL = 'https://api.themoviedb.org/3';
+const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
+const IMAGE_BASE_URL_ORIGINAL = 'https://image.tmdb.org/t/p/original';
 
 const searchInput = document.getElementById('searchInput');
 const searchBtn = document.getElementById('searchBtn');
@@ -50,7 +52,7 @@ themeToggle.addEventListener('click', toggleTheme);
 // Infinite scroll
 window.addEventListener('scroll', () => {
     if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500) {
-        if (currentPage < Math.ceil(totalResults / 10) && totalResults > 0) {
+        if (totalResults > 0) {
             currentPage++;
             loadMoreResults();
         }
@@ -148,14 +150,14 @@ async function searchMovies() {
     document.getElementById('genreSections').style.display = 'none';
 
     try {
-        let url = `${BASE_URL}?apikey=${API_KEY}`;
+        let url = `${BASE_URL}/search/movie?api_key=${API_KEY}`;
         
         if (query) {
-            url += `&s=${encodeURIComponent(query)}`;
+            url += `&query=${encodeURIComponent(query)}`;
         }
         
-        if (typeFilterValue) {
-            url += `&type=${typeFilterValue}`;
+        if (yearFilterValue) {
+            url += `&year=${yearFilterValue}`;
         }
         
         url += `&page=${currentPage}`;
@@ -165,13 +167,16 @@ async function searchMovies() {
 
         hideLoading();
 
-        if (data.Response === 'True') {
-            let filteredMovies = data.Search;
-            totalResults = parseInt(data.totalResults);
+        if (data.results && data.results.length > 0) {
+            let filteredMovies = data.results;
+            totalResults = data.total_results;
             
-            // Apply year filter if selected
-            if (yearFilterValue) {
-                filteredMovies = filterByYear(filteredMovies, yearFilterValue);
+            // Apply type filter if selected (movie/tv)
+            if (typeFilterValue) {
+                filteredMovies = filteredMovies.filter(movie => {
+                    if (typeFilterValue === 'movie') return true;
+                    return false;
+                });
             }
             
             if (filteredMovies.length === 0) {
@@ -180,10 +185,10 @@ async function searchMovies() {
                 updatePaginationControls(0);
             } else {
                 displayMovies(filteredMovies);
-                updatePaginationControls(Math.ceil(totalResults / 10));
+                updatePaginationControls(data.total_pages);
             }
         } else {
-            showError(data.Error || 'No movies found');
+            showError('No movies found');
             resultsContainer.innerHTML = '<p class="no-results">No movies found. Try a different search term.</p>';
             updatePaginationControls(0);
         }
@@ -216,10 +221,10 @@ async function loadMoreResults() {
     showLoading();
     
     try {
-        let url = `${BASE_URL}?apikey=${API_KEY}&s=${encodeURIComponent(query)}&page=${currentPage}`;
+        let url = `${BASE_URL}/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(query)}&page=${currentPage}`;
         
-        if (typeFilterValue) {
-            url += `&type=${typeFilterValue}`;
+        if (yearFilterValue) {
+            url += `&year=${yearFilterValue}`;
         }
 
         const response = await fetch(url);
@@ -227,16 +232,19 @@ async function loadMoreResults() {
 
         hideLoading();
 
-        if (data.Response === 'True') {
-            let filteredMovies = data.Search;
+        if (data.results && data.results.length > 0) {
+            let filteredMovies = data.results;
             
-            if (yearFilterValue) {
-                filteredMovies = filterByYear(filteredMovies, yearFilterValue);
+            if (typeFilterValue) {
+                filteredMovies = filteredMovies.filter(movie => {
+                    if (typeFilterValue === 'movie') return true;
+                    return false;
+                });
             }
             
             if (filteredMovies.length > 0) {
                 appendMovies(filteredMovies);
-                updatePaginationControls(Math.ceil(totalResults / 10));
+                updatePaginationControls(data.total_pages);
             }
         }
     } catch (error) {
@@ -249,19 +257,20 @@ function appendMovies(movies) {
     movies.forEach(movie => {
         const movieCard = document.createElement('div');
         movieCard.className = 'movie-card';
-        movieCard.dataset.imdbId = movie.imdbID;
+        movieCard.dataset.tmdbId = movie.id;
+        const posterUrl = movie.poster_path ? `${IMAGE_BASE_URL}${movie.poster_path}` : 'https://via.placeholder.com/300x450?text=No+Poster';
         movieCard.innerHTML = `
             <img 
-                src="${movie.Poster !== 'N/A' ? movie.Poster : 'https://via.placeholder.com/300x450?text=No+Poster'}" 
-                alt="${movie.Title}" 
+                src="${posterUrl}" 
+                alt="${movie.title}" 
                 class="movie-poster"
             >
             <div class="movie-info">
-                <h3 class="movie-title">${movie.Title}</h3>
-                <p class="movie-year">${movie.Year}</p>
+                <h3 class="movie-title">${movie.title}</h3>
+                <p class="movie-year">${movie.release_date ? movie.release_date.split('-')[0] : 'N/A'}</p>
             </div>
         `;
-        movieCard.addEventListener('click', () => getMovieDetails(movie.imdbID));
+        movieCard.addEventListener('click', () => getMovieDetails(movie.id));
         resultsContainer.appendChild(movieCard);
     });
 }
@@ -269,37 +278,37 @@ function appendMovies(movies) {
 function filterByYear(movies, yearFilter) {
     switch(yearFilter) {
         case '2024':
-            return movies.filter(movie => movie.Year.includes('2024'));
+            return movies.filter(movie => movie.release_date && movie.release_date.includes('2024'));
         case '2023':
-            return movies.filter(movie => movie.Year.includes('2023'));
+            return movies.filter(movie => movie.release_date && movie.release_date.includes('2023'));
         case '2022':
-            return movies.filter(movie => movie.Year.includes('2022'));
+            return movies.filter(movie => movie.release_date && movie.release_date.includes('2022'));
         case '2021':
-            return movies.filter(movie => movie.Year.includes('2021'));
+            return movies.filter(movie => movie.release_date && movie.release_date.includes('2021'));
         case '2020':
-            return movies.filter(movie => movie.Year.includes('2020'));
+            return movies.filter(movie => movie.release_date && movie.release_date.includes('2020'));
         case '2019':
-            return movies.filter(movie => movie.Year.includes('2019'));
+            return movies.filter(movie => movie.release_date && movie.release_date.includes('2019'));
         case '2018':
-            return movies.filter(movie => movie.Year.includes('2018'));
+            return movies.filter(movie => movie.release_date && movie.release_date.includes('2018'));
         case '2010s':
             return movies.filter(movie => {
-                const year = parseInt(movie.Year);
+                const year = movie.release_date ? parseInt(movie.release_date.split('-')[0]) : 0;
                 return year >= 2010 && year < 2020;
             });
         case '2000s':
             return movies.filter(movie => {
-                const year = parseInt(movie.Year);
+                const year = movie.release_date ? parseInt(movie.release_date.split('-')[0]) : 0;
                 return year >= 2000 && year < 2010;
             });
         case '1990s':
             return movies.filter(movie => {
-                const year = parseInt(movie.Year);
+                const year = movie.release_date ? parseInt(movie.release_date.split('-')[0]) : 0;
                 return year >= 1990 && year < 2000;
             });
         case 'older':
             return movies.filter(movie => {
-                const year = parseInt(movie.Year);
+                const year = movie.release_date ? parseInt(movie.release_date.split('-')[0]) : 0;
                 return year < 1990;
             });
         default:
@@ -320,40 +329,61 @@ function clearFilters() {
 
 // Display movies in grid
 function displayMovies(movies) {
-    resultsContainer.innerHTML = movies.map(movie => `
-        <div class="movie-card" data-imdb-id="${movie.imdbID}">
+    resultsContainer.innerHTML = movies.map(movie => {
+        const posterUrl = movie.poster_path ? `${IMAGE_BASE_URL}${movie.poster_path}` : 'https://via.placeholder.com/300x450?text=No+Poster';
+        const isFavorite = isMovieFavorite(movie.id);
+        return `
+        <div class="movie-card" data-tmdb-id="${movie.id}">
+            <div class="favorite-indicator ${isFavorite ? 'active' : ''}" data-tmdb-id="${movie.id}" data-title="${movie.title.replace(/'/g, "\\'")}" data-poster="${movie.poster_path || ''}">
+                <i data-lucide="${isFavorite ? 'heart' : 'heart'}"></i>
+            </div>
             <img 
-                src="${movie.Poster !== 'N/A' ? movie.Poster : 'https://via.placeholder.com/300x450?text=No+Poster'}" 
-                alt="${movie.Title}" 
+                src="${posterUrl}" 
+                alt="${movie.title}" 
                 class="movie-poster"
             >
             <div class="movie-info">
-                <h3 class="movie-title">${movie.Title}</h3>
-                <p class="movie-year">${movie.Year}</p>
+                <h3 class="movie-title">${movie.title}</h3>
+                <p class="movie-year">${movie.release_date ? movie.release_date.split('-')[0] : 'N/A'}</p>
             </div>
         </div>
-    `).join('');
+    `}).join('');
     
     // Add event listeners to movie cards
     document.querySelectorAll('.movie-card').forEach(card => {
-        card.addEventListener('click', () => {
-            const imdbID = card.dataset.imdbId;
-            getMovieDetails(imdbID);
+        card.addEventListener('click', (e) => {
+            // Don't trigger movie details if clicking on favorite indicator
+            if (e.target.closest('.favorite-indicator')) return;
+            const tmdbId = card.dataset.tmdbId;
+            getMovieDetails(tmdbId);
         });
     });
+    
+    // Add event listeners to favorite indicators
+    document.querySelectorAll('.favorite-indicator').forEach(indicator => {
+        indicator.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const tmdbId = indicator.dataset.tmdbId;
+            const title = indicator.dataset.title;
+            const poster = indicator.dataset.poster;
+            toggleFavorite(tmdbId, title, poster);
+        });
+    });
+    
+    lucide.createIcons();
 }
 
 // Get detailed movie information
-async function getMovieDetails(imdbID) {
+async function getMovieDetails(tmdbId) {
     showLoading();
     
     try {
-        const response = await fetch(`${BASE_URL}?apikey=${API_KEY}&i=${imdbID}&plot=full`);
+        const response = await fetch(`${BASE_URL}/movie/${tmdbId}?api_key=${API_KEY}&append_to_response=credits,videos,recommendations`);
         const movie = await response.json();
         
         hideLoading();
         
-        if (movie.Response === 'True') {
+        if (movie.id) {
             displayMovieDetails(movie);
         } else {
             showError('Failed to fetch movie details');
@@ -367,57 +397,68 @@ async function getMovieDetails(imdbID) {
 
 // Display movie details in modal
 function displayMovieDetails(movie) {
-    const posterUrl = movie.Poster !== 'N/A' ? movie.Poster : 'https://via.placeholder.com/300x450?text=No+Poster';
-    const isFavorite = isMovieFavorite(movie.imdbID);
+    const posterUrl = movie.poster_path ? `${IMAGE_BASE_URL_ORIGINAL}${movie.poster_path}` : 'https://via.placeholder.com/300x450?text=No+Poster';
+    const isFavorite = isMovieFavorite(movie.id);
     
     // Load similar movies
-    loadSimilarMovies(movie.Title, movie.Genre);
+    loadSimilarMovies(movie.id, movie.genre_ids);
     
-    let ratingsHTML = '';
-    if (movie.Ratings && movie.Ratings.length > 0) {
-        ratingsHTML = movie.Ratings.map(rating => `
-            <div class="rating-item">
-                <div class="rating-source">${rating.Source}</div>
-                <div class="rating-value">${rating.Value}</div>
-            </div>
-        `).join('');
-    } else {
-        ratingsHTML = '<div class="rating-item"><div class="rating-source">No ratings available</div></div>';
-    }
+    // Format genres
+    const genres = movie.genres ? movie.genres.map(g => g.name).join(', ') : 'N/A';
+    
+    // Format cast
+    const cast = movie.credits && movie.credits.cast ? movie.credits.cast.slice(0, 5).map(c => c.name).join(', ') : 'N/A';
+    
+    // Format director
+    const director = movie.credits && movie.credits.crew ? movie.credits.crew.find(c => c.job === 'Director')?.name || 'N/A' : 'N/A';
+    
+    // Format writers
+    const writers = movie.credits && movie.credits.crew ? movie.credits.crew.filter(c => c.department === 'Writing').slice(0, 3).map(c => c.name).join(', ') : 'N/A';
+    
+    // Format runtime
+    const runtime = movie.runtime ? `${movie.runtime} min` : 'N/A';
+    
+    // Format budget and revenue
+    const budget = movie.budget ? `$${movie.budget.toLocaleString()}` : 'N/A';
+    const revenue = movie.revenue ? `$${movie.revenue.toLocaleString()}` : 'N/A';
+    
+    // Get IMDb ID if available
+    const imdbId = movie.imdb_id || '';
 
     modalBody.innerHTML = `
         <div class="modal-body">
-            <img src="${posterUrl}" alt="${movie.Title}" class="modal-poster">
+            <img src="${posterUrl}" alt="${movie.title}" class="modal-poster">
             <div class="modal-details">
-                <h2>${movie.Title}</h2>
-                <p class="year">${movie.Year}</p>
-                <span class="rating">IMDb: ${movie.imdbRating}/10</span>
+                <h2>${movie.title}</h2>
+                <p class="year">${movie.release_date ? movie.release_date.split('-')[0] : 'N/A'}</p>
+                <span class="rating">TMDB: ${movie.vote_average}/10 (${movie.vote_count} votes)</span>
                 
                 <div class="ratings-container">
-                    ${ratingsHTML}
+                    <div class="rating-item">
+                        <div class="rating-source">TMDB</div>
+                        <div class="rating-value">${movie.vote_average}/10</div>
+                    </div>
                 </div>
                 
-                <p class="plot"><strong>Plot:</strong> ${movie.Plot}</p>
-                <p class="genre"><strong>Genre:</strong> ${movie.Genre}</p>
-                <p class="director"><strong>Director:</strong> ${movie.Director}</p>
-                <p class="actors"><strong>Actors:</strong> ${movie.Actors}</p>
-                <p class="writer"><strong>Writer:</strong> ${movie.Writer}</p>
-                <p class="runtime"><strong>Runtime:</strong> ${movie.Runtime}</p>
-                <p><strong>Language:</strong> ${movie.Language}</p>
-                <p><strong>Country:</strong> ${movie.Country}</p>
-                <p><strong>Awards:</strong> ${movie.Awards}</p>
-                ${movie.Collection ? `<p><strong>Collection:</strong> ${movie.Collection}</p>` : ''}
-                ${movie.BoxOffice && movie.BoxOffice !== 'N/A' ? `<p><strong>Box Office:</strong> ${movie.BoxOffice}</p>` : ''}
-                ${movie.imdbVotes && movie.imdbVotes !== 'N/A' ? `<p><strong>IMDb Votes:</strong> ${movie.imdbVotes}</p>` : ''}
-                <a href="https://www.imdb.com/title/${movie.imdbID}/reviews" target="_blank" class="reviews-link"><i data-lucide="file-text"></i> Read User Reviews on IMDb</a>
+                <p class="plot"><strong>Plot:</strong> ${movie.overview || 'No overview available'}</p>
+                <p class="genre"><strong>Genre:</strong> ${genres}</p>
+                <p class="director"><strong>Director:</strong> ${director}</p>
+                <p class="actors"><strong>Actors:</strong> ${cast}</p>
+                <p class="writer"><strong>Writer:</strong> ${writers}</p>
+                <p class="runtime"><strong>Runtime:</strong> ${runtime}</p>
+                <p><strong>Language:</strong> ${movie.original_language || 'N/A'}</p>
+                <p><strong>Country:</strong> ${movie.production_countries && movie.production_countries.length > 0 ? movie.production_countries.map(c => c.name).join(', ') : 'N/A'}</p>
+                <p><strong>Budget:</strong> ${budget}</p>
+                <p><strong>Revenue:</strong> ${revenue}</p>
+                ${imdbId ? `<a href="https://www.imdb.com/title/${imdbId}/reviews" target="_blank" class="reviews-link"><i data-lucide="file-text"></i> Read User Reviews on IMDb</a>` : ''}
                 <div class="button-group">
-                    <button id="favoriteBtn" class="favorite-btn" data-imdb-id="${movie.imdbID}" data-title="${movie.Title.replace(/'/g, "\\'")}" data-poster="${movie.Poster !== 'N/A' ? movie.Poster : ''}">
+                    <button id="favoriteBtn" class="favorite-btn" data-tmdb-id="${movie.id}" data-title="${movie.title.replace(/'/g, "\\'")}" data-poster="${movie.poster_path || ''}">
                         ${isFavorite ? '<i data-lucide="heart-off"></i> Remove from Favorites' : '<i data-lucide="heart"></i> Add to Favorites'}
                     </button>
-                    <button id="trailerBtn" class="trailer-btn" data-title="${movie.Title.replace(/'/g, "\\'")}">
+                    <button id="trailerBtn" class="trailer-btn" data-title="${movie.title.replace(/'/g, "\\'")}">
                         <i data-lucide="film"></i> Watch Trailer
                     </button>
-                    <button id="shareBtn" class="share-btn" data-imdb-id="${movie.imdbID}" data-title="${movie.Title.replace(/'/g, "\\'")}">
+                    <button id="shareBtn" class="share-btn" data-tmdb-id="${movie.id}" data-title="${movie.title.replace(/'/g, "\\'")}">
                         <i data-lucide="share-2"></i> Share
                     </button>
                 </div>
@@ -431,7 +472,7 @@ function displayMovieDetails(movie) {
     const shareBtn = document.getElementById('shareBtn');
     
     favoriteBtn.addEventListener('click', () => {
-        toggleFavorite(favoriteBtn.dataset.imdbId, favoriteBtn.dataset.title, favoriteBtn.dataset.poster);
+        toggleFavorite(favoriteBtn.dataset.tmdbId, favoriteBtn.dataset.title, favoriteBtn.dataset.poster);
     });
     
     trailerBtn.addEventListener('click', () => {
@@ -439,7 +480,7 @@ function displayMovieDetails(movie) {
     });
     
     shareBtn.addEventListener('click', () => {
-        shareMovie(shareBtn.dataset.imdbId, shareBtn.dataset.title);
+        shareMovie(shareBtn.dataset.tmdbId, shareBtn.dataset.title);
     });
     
     movieModal.style.display = 'block';
@@ -495,20 +536,20 @@ function saveFavorites(favorites) {
     localStorage.setItem('movieFavorites', JSON.stringify(favorites));
 }
 
-function isMovieFavorite(imdbID) {
+function isMovieFavorite(tmdbId) {
     const favorites = getFavorites();
-    return favorites.some(movie => movie.imdbID === imdbID);
+    return favorites.some(movie => movie.tmdbId === tmdbId);
 }
 
-function toggleFavorite(imdbID, title, poster) {
+function toggleFavorite(tmdbId, title, poster) {
     const favorites = getFavorites();
-    const existingIndex = favorites.findIndex(movie => movie.imdbID === imdbID);
+    const existingIndex = favorites.findIndex(movie => movie.tmdbId === tmdbId);
     
     if (existingIndex > -1) {
         favorites.splice(existingIndex, 1);
     } else {
         const note = prompt('Add a note for this movie (optional):', '');
-        favorites.push({ imdbID, title, poster, note: note || '' });
+        favorites.push({ tmdbId, title, poster, note: note || '' });
     }
     
     saveFavorites(favorites);
@@ -521,15 +562,15 @@ function toggleFavorite(imdbID, title, poster) {
     }
     
     // Update movie cards if they're displayed
-    updateMovieCardFavoriteStatus(imdbID);
+    updateMovieCardFavoriteStatus(tmdbId);
 }
 
-function updateMovieCardFavoriteStatus(imdbID) {
+function updateMovieCardFavoriteStatus(tmdbId) {
     const movieCards = document.querySelectorAll('.movie-card');
     movieCards.forEach(card => {
-        const onclick = card.getAttribute('onclick');
-        if (onclick && onclick.includes(imdbID)) {
-            const isFavorite = isMovieFavorite(imdbID);
+        const cardTmdbId = card.dataset.tmdbId;
+        if (cardTmdbId && cardTmdbId === tmdbId) {
+            const isFavorite = isMovieFavorite(tmdbId);
             let favoriteIndicator = card.querySelector('.favorite-indicator');
             if (!favoriteIndicator) {
                 favoriteIndicator = document.createElement('div');
@@ -556,11 +597,11 @@ function showFavorites() {
     
     // Fetch details for each favorite
     Promise.all(favorites.map(fav => 
-        fetch(`${BASE_URL}?apikey=${API_KEY}&i=${fav.imdbID}`)
+        fetch(`${BASE_URL}/movie/${fav.tmdbId}?api_key=${API_KEY}`)
             .then(res => res.json())
     )).then(movies => {
         hideLoading();
-        const validMovies = movies.filter(movie => movie.Response === 'True');
+        const validMovies = movies.filter(movie => movie.id);
         displayMovies(validMovies);
     }).catch(error => {
         hideLoading();
@@ -603,7 +644,7 @@ function updateSearchHistoryDatalist() {
 // Check if API key is set on page load
 window.addEventListener('load', () => {
     if (API_KEY === 'YOUR_API_KEY_HERE') {
-        showError('Please add your OMDb API key to script.js to use this application');
+        showError('Please add your TMDB API key to script.js to use this application');
     }
     updateSearchHistoryDatalist();
     loadTrendingMovies();
@@ -623,7 +664,7 @@ function loadThemePreference() {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'light') {
         document.body.classList.add('light-theme');
-        themeToggle.innerHTML = '<i data-lucide="sun"></i> Theme';
+        themeToggle.innerHTML = '<i data-lucide="sun"></i>';
         lucide.createIcons();
     }
 }
@@ -631,24 +672,20 @@ function loadThemePreference() {
 function toggleTheme() {
     document.body.classList.toggle('light-theme');
     const isLight = document.body.classList.contains('light-theme');
-    themeToggle.innerHTML = isLight ? '<i data-lucide="sun"></i> Theme' : '<i data-lucide="moon"></i> Theme';
+    themeToggle.innerHTML = isLight ? '<i data-lucide="sun"></i>' : '<i data-lucide="moon"></i>';
     lucide.createIcons();
     localStorage.setItem('theme', isLight ? 'light' : 'dark');
 }
 
 // Similar movies functions
-async function loadSimilarMovies(title, genre) {
+async function loadSimilarMovies(movieId, genreIds) {
     try {
-        // Use genre to find similar movies
-        const mainGenre = genre.split(',')[0].trim();
-        const response = await fetch(`${BASE_URL}?apikey=${API_KEY}&s=${mainGenre}&type=movie`);
+        const response = await fetch(`${BASE_URL}/movie/${movieId}/recommendations?api_key=${API_KEY}`);
         const data = await response.json();
         
-        if (data.Response === 'True') {
-            // Filter out the current movie and get first 6 similar movies
-            const similarMovies = data.Search
-                .filter(movie => movie.Title.toLowerCase() !== title.toLowerCase())
-                .slice(0, 6);
+        if (data.results && data.results.length > 0) {
+            // Get first 6 similar movies
+            const similarMovies = data.results.slice(0, 6);
             
             if (similarMovies.length > 0) {
                 displaySimilarMovies(similarMovies);
@@ -666,22 +703,24 @@ async function loadSimilarMovies(title, genre) {
 
 function displaySimilarMovies(movies) {
     similarMoviesSection.style.display = 'block';
-    similarMoviesContainer.innerHTML = movies.map(movie => `
-        <div class="similar-movie-card" data-imdb-id="${movie.imdbID}">
+    similarMoviesContainer.innerHTML = movies.map(movie => {
+        const posterUrl = movie.poster_path ? `${IMAGE_BASE_URL}${movie.poster_path}` : 'https://via.placeholder.com/120x180?text=No+Poster';
+        return `
+        <div class="similar-movie-card" data-tmdb-id="${movie.id}">
             <img 
-                src="${movie.Poster !== 'N/A' ? movie.Poster : 'https://via.placeholder.com/120x180?text=No+Poster'}" 
-                alt="${movie.Title}" 
+                src="${posterUrl}" 
+                alt="${movie.title}" 
                 class="similar-movie-poster"
             >
-            <p class="similar-movie-title">${movie.Title}</p>
+            <p class="similar-movie-title">${movie.title}</p>
         </div>
-    `).join('');
+    `}).join('');
     
     // Add event listeners to similar movie cards
     document.querySelectorAll('.similar-movie-card').forEach(card => {
         card.addEventListener('click', () => {
-            const imdbID = card.dataset.imdbId;
-            getMovieDetails(imdbID);
+            const tmdbId = card.dataset.tmdbId;
+            getMovieDetails(tmdbId);
         });
     });
 }
@@ -689,17 +728,27 @@ function displaySimilarMovies(movies) {
 // Load trending movies
 async function loadTrendingMovies() {
     try {
-        // Search for movies from different genres for 2026
+        // TMDB genre IDs
+        const genreMap = {
+            'action': 28,
+            'comedy': 35,
+            'drama': 18,
+            'romance': 10749,
+            'horror': 27,
+            'sci-fi': 878
+        };
+        
         const genres = ['action', 'comedy', 'drama', 'romance', 'horror', 'sci-fi'];
         const genreSections = document.getElementById('genreSections');
         genreSections.innerHTML = '';
         
         for (const genre of genres) {
             try {
-                const response = await fetch(`${BASE_URL}?apikey=${API_KEY}&s=${genre}&y=2026&type=movie`);
+                const genreId = genreMap[genre];
+                const response = await fetch(`${BASE_URL}/discover/movie?api_key=${API_KEY}&with_genres=${genreId}&sort_by=popularity.desc&page=1`);
                 const data = await response.json();
                 
-                if (data.Response === 'True') {
+                if (data.results && data.results.length > 0) {
                     // Create genre section
                     const genreSection = document.createElement('div');
                     genreSection.className = 'genre-section';
@@ -711,24 +760,25 @@ async function loadTrendingMovies() {
                     
                     // Add movies to genre section
                     const container = genreSection.querySelector('.genre-movies-container');
-                    const movies = data.Search.slice(0, 5);
+                    const movies = data.results.slice(0, 5);
                     
                     movies.forEach(movie => {
                         const movieCard = document.createElement('div');
                         movieCard.className = 'movie-card';
-                        movieCard.dataset.imdbId = movie.imdbID;
+                        movieCard.dataset.tmdbId = movie.id;
+                        const posterUrl = movie.poster_path ? `${IMAGE_BASE_URL}${movie.poster_path}` : 'https://via.placeholder.com/300x450?text=No+Poster';
                         movieCard.innerHTML = `
                             <img 
-                                src="${movie.Poster !== 'N/A' ? movie.Poster : 'https://via.placeholder.com/300x450?text=No+Poster'}" 
-                                alt="${movie.Title}" 
+                                src="${posterUrl}" 
+                                alt="${movie.title}" 
                                 class="movie-poster"
                             >
                             <div class="movie-info">
-                                <h3 class="movie-title">${movie.Title}</h3>
-                                <p class="movie-year">${movie.Year}</p>
+                                <h3 class="movie-title">${movie.title}</h3>
+                                <p class="movie-year">${movie.release_date ? movie.release_date.split('-')[0] : 'N/A'}</p>
                             </div>
                         `;
-                        movieCard.addEventListener('click', () => getMovieDetails(movie.imdbID));
+                        movieCard.addEventListener('click', () => getMovieDetails(movie.id));
                         container.appendChild(movieCard);
                     });
                 }
@@ -744,25 +794,27 @@ async function loadTrendingMovies() {
 }
 
 function displayTrendingMovies(movies) {
-    trendingContainer.innerHTML = movies.map(movie => `
-        <div class="movie-card" data-imdb-id="${movie.imdbID}">
+    trendingContainer.innerHTML = movies.map(movie => {
+        const posterUrl = movie.poster_path ? `${IMAGE_BASE_URL}${movie.poster_path}` : 'https://via.placeholder.com/300x450?text=No+Poster';
+        return `
+        <div class="movie-card" data-tmdb-id="${movie.id}">
             <img 
-                src="${movie.Poster !== 'N/A' ? movie.Poster : 'https://via.placeholder.com/300x450?text=No+Poster'}" 
-                alt="${movie.Title}" 
+                src="${posterUrl}" 
+                alt="${movie.title}" 
                 class="movie-poster"
             >
             <div class="movie-info">
-                <h3 class="movie-title">${movie.Title}</h3>
-                <p class="movie-year">${movie.Year}</p>
+                <h3 class="movie-title">${movie.title}</h3>
+                <p class="movie-year">${movie.release_date ? movie.release_date.split('-')[0] : 'N/A'}</p>
             </div>
         </div>
-    `).join('');
+    `}).join('');
     
     // Add event listeners to trending movie cards
     document.querySelectorAll('#trendingContainer .movie-card').forEach(card => {
         card.addEventListener('click', () => {
-            const imdbID = card.dataset.imdbId;
-            getMovieDetails(imdbID);
+            const tmdbId = card.dataset.tmdbId;
+            getMovieDetails(tmdbId);
         });
     });
 }
@@ -788,8 +840,8 @@ async function openTrailer(movieTitle) {
 }
 
 // Share movie function
-function shareMovie(imdbID, title) {
-    const shareUrl = `${window.location.origin}${window.location.pathname}?movie=${imdbID}`;
+function shareMovie(tmdbId, title) {
+    const shareUrl = `${window.location.origin}${window.location.pathname}?movie=${tmdbId}`;
     
     if (navigator.share) {
         navigator.share({
